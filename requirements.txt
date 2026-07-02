@@ -6,4 +6,4 @@ google-cloud-aiplatform
 google-cloud-storage
 google-cloud-documentai
 psycopg2-binary
-sqlalchemy
+sqlalchemypydantic-settings

@@ -1,21 +1,22 @@
 from fastapi import FastAPI
 
-app = FastAPI(
-    title="Fair & Fast Python API Template",
-    version="1.0.0",
-    description="Standard FastAPI template for Fair & Fast projects"
-)
+from app.api.v1.router import api_router
+from app.core.config import get_settings
 
-@app.get("/")
-def root():
-    return {
-        "service": "Fair & Fast Python API Template",
-        "status": "running",
-        "version": "1.0.0"
-    }
 
-@app.get("/health")
-def health_check():
-    return {
-        "status": "ok"
-    }
+def create_app() -> FastAPI:
+    """Create and configure FastAPI application."""
+    settings = get_settings()
+
+    app = FastAPI(
+        title=settings.project_name,
+        version=settings.app_version,
+        description="AI-based EV Truck Energy Optimization Platform",
+    )
+
+    app.include_router(api_router)
+
+    return app
+
+
+app = create_app()
