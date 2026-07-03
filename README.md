@@ -1,53 +1,97 @@
-# FairFast Python Template
+# EV Truck Optimization API
 
-Standard FastAPI + Dev Container + Docker Engine (WSL)
+FastAPI MVP for EV fleet data, trip plan-vs-actual analysis, Google Sheet telemetry import, and rule-based optimization. The application uses PostgreSQL, SQLAlchemy, Alembic, and a Router → Service → Repository structure.
 
----
+## Local setup
 
-## Requirements
-
-- Windows 11
-- WSL2
-- Docker Engine
-- VS Code
-- Dev Containers Extension
-
----
-
-## Getting Started
-
-1. Clone repository
+Prerequisites: Python 3.12 and PostgreSQL.
 
 ```bash
-git clone ...
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+cp .env.example .env
 ```
 
-2. Open in VS Code
-
-3. Reopen in Dev Container
-
-4. Verify environment
+Create the local database and update `DATABASE_URL` if your PostgreSQL credentials differ:
 
 ```bash
-make check
+createdb ev_truck
+alembic upgrade head
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-5. Run API
+Swagger UI is available at <http://localhost:8000/docs>; health remains at `GET /health`.
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---:|---|
+| `APP_NAME` | No | OpenAPI application title |
+| `APP_VERSION` | No | OpenAPI application version |
+| `ENV` | No | Runtime environment name |
+| `DATABASE_URL` | Yes | PostgreSQL SQLAlchemy URL using the `postgresql+psycopg2` driver |
+| `GOOGLE_SHEET_ID` | For sync | Default spreadsheet ID |
+| `GOOGLE_SHEET_RANGE` | No | Default A1 range; defaults to `vehicle_readings!A:Z` |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Local only | Optional path to a service-account JSON file; do not commit it |
+
+On Cloud Run, Google Application Default Credentials are used when `GOOGLE_APPLICATION_CREDENTIALS` is absent. Grant the Cloud Run service account access to the spreadsheet. Never place database passwords or service-account JSON in the image or repository.
+
+## Database migrations
+
+Apply all migrations:
 
 ```bash
-make run
+alembic upgrade head
 ```
 
-6. Open Swagger
+Create a migration after changing models:
 
-http://localhost:8000/docs
+```bash
+alembic revision --autogenerate -m "describe change"
+alembic upgrade head
+```
 
----
+Rollback one revision:
 
-## Team Rules
+```bash
+alembic downgrade -1
+```
 
-- Source Code อยู่ใน WSL (`~/projects`)
-- ห้ามเก็บ Source Code ซ้ำใน Windows (`D:\Projects`)
-- ใช้ Docker Engine บน WSL
-- ห้ามใช้ Docker Desktop
-- Git Push/Pull ผ่าน WSL Terminal
+## Google Sheet import
+
+The first row must contain headers. Supported columns are:
+
+```text
+source_record_id, vehicle_id, vehicle_external_id, trip_id, recorded_at,
+soc_percent, energy_used_kwh, distance_km, latitude, longitude
+```
+
+Either `vehicle_id` or `vehicle_external_id` is required. `recorded_at` must be an ISO-8601 timestamp. `source_record_id` is recommended; when omitted, a deterministic hash of the row is used. The database unique constraint prevents duplicate source records.
+
+Run a sync with configured defaults:
+
+```bash
+curl -X POST http://localhost:8000/integrations/google-sheet/sync \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+```
+
+## Cloud Run manual deployment
+
+The production image listens on Cloud Run's `PORT`. Store the database URL in Secret Manager first; for Cloud SQL, its value can use the Unix socket form `postgresql+psycopg2://USER:PASSWORD@/DATABASE?host=/cloudsql/PROJECT:REGION:INSTANCE`.
+
+```bash
+gcloud run deploy ev-truck-api \
+  --source . \
+  --region asia-southeast1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --service-account ev-truck-api@PROJECT_ID.iam.gserviceaccount.com \
+  --add-cloudsql-instances PROJECT_ID:asia-southeast1:INSTANCE_NAME \
+  --set-secrets DATABASE_URL=ev-truck-database-url:latest \
+  --set-env-vars APP_NAME=ev-truck,ENV=production,GOOGLE_SHEET_ID=SHEET_ID,GOOGLE_SHEET_RANGE=vehicle_readings!A:Z
+```
+
+Run `alembic upgrade head` against the production database as a controlled release step before sending traffic to a schema-dependent revision. Cloud Run should not run concurrent migrations during container startup.
