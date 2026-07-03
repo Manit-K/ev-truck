@@ -18,6 +18,13 @@
       ]
     }
   },
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "FastAPI",
+      "onAutoForward": "notify"
+    }
+  },
   "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
   "remoteUser": "vscode"
 }
