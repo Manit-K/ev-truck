@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ev-truck-postgres
+    environment:
+      POSTGRES_DB: evtruck
+      POSTGRES_USER: evtruck
+      POSTGRES_PASSWORD: evtruck
+    ports:
+      - "5432:5432"
+    volumes:
+      - ev_truck_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evtruck -d evtruck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    container_name: ev-truck-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  ev_truck_postgres_data:

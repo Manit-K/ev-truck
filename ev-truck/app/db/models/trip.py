@@ -17,9 +17,7 @@ class Trip(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"), index=True)
-    driver_id: Mapped[int | None] = mapped_column(
-        ForeignKey("drivers.id"), nullable=True, index=True
-    )
+    driver_id: Mapped[int | None] = mapped_column(ForeignKey("drivers.id"), index=True)
     external_id: Mapped[str | None] = mapped_column(String(100), unique=True, index=True)
     origin: Mapped[str] = mapped_column(String(255))
     destination: Mapped[str] = mapped_column(String(255))
