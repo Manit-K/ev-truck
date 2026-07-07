@@ -16,15 +16,6 @@ class VehicleReadingRepository:
             )
         )
 
-    def list_by_trip(self, trip_id: int) -> list[VehicleReading]:
-        return list(
-            self.db.scalars(
-                select(VehicleReading)
-                .where(VehicleReading.trip_id == trip_id)
-                .order_by(VehicleReading.recorded_at, VehicleReading.id)
-            )
-        )
-
     def upsert(self, values: dict) -> tuple[VehicleReading, bool]:
         reading = self.get_by_source_record(values["source"], values["source_record_id"])
         created = reading is None

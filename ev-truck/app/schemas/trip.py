@@ -7,12 +7,12 @@ class TripBase(BaseModel):
     vehicle_id: int
     driver_id: int | None = None
     external_id: str | None = Field(default=None, max_length=100)
-    origin: str = Field(default="unknown", min_length=1, max_length=255)
-    destination: str = Field(default="unknown", min_length=1, max_length=255)
+    origin: str = Field(min_length=1, max_length=255)
+    destination: str = Field(min_length=1, max_length=255)
     status: str = Field(default="planned", max_length=30)
-    planned_distance_km: float = Field(default=0, ge=0)
+    planned_distance_km: float = Field(ge=0)
     actual_distance_km: float | None = Field(default=None, ge=0)
-    planned_energy_kwh: float = Field(default=0, ge=0)
+    planned_energy_kwh: float = Field(ge=0)
     actual_energy_kwh: float | None = Field(default=None, ge=0)
     starting_soc_percent: float | None = Field(default=None, ge=0, le=100)
     ending_soc_percent: float | None = Field(default=None, ge=0, le=100)
@@ -51,30 +51,16 @@ class TripRead(TripBase):
     updated_at: datetime
 
 
-class TripPlan(BaseModel):
-    planned_distance_km: float
-    planned_start_time: datetime | None
-    planned_end_time: datetime | None
-
-
-class TripActual(BaseModel):
-    actual_distance_km: float | None
-    actual_start_time: datetime | None
-    actual_end_time: datetime | None
-    battery_start_percent: float | None
-    battery_end_percent: float | None
-    odometer_start_km: float | None
-    odometer_end_km: float | None
-
-
-class TripVariance(BaseModel):
-    distance_variance_km: float | None
-    battery_used_percent: float | None
+class MetricComparison(BaseModel):
+    planned: float
+    actual: float | None
+    variance: float | None
+    variance_percent: float | None
 
 
 class PlanVsActual(BaseModel):
     trip_id: int
-    vehicle_id: int
-    planned: TripPlan
-    actual: TripActual
-    variance: TripVariance
+    distance_km: MetricComparison
+    energy_kwh: MetricComparison
+    planned_ending_soc_percent: float | None
+    actual_ending_soc_percent: float | None
