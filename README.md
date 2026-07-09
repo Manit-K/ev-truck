@@ -1,97 +1,283 @@
 # EV Truck Optimization API
 
-FastAPI MVP for EV fleet data, trip plan-vs-actual analysis, Google Sheet telemetry import, and rule-based optimization. The application uses PostgreSQL, SQLAlchemy, Alembic, and a Router → Service → Repository structure.
+Backend API for **EV Fleet Management**, **Trip Planning**, **Vehicle Telemetry**, **Plan vs Actual Analysis**, and **Fleet Optimization**.
 
-## Local setup
+The project is built using **FastAPI**, **SQLAlchemy 2.x**, **PostgreSQL**, and follows a **Clean Architecture** design for maintainability and scalability.
 
-Prerequisites: Python 3.12 and PostgreSQL.
+---
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-cp .env.example .env
-```
+# 🚚 Project Overview
 
-Create the local database and update `DATABASE_URL` if your PostgreSQL credentials differ:
-
-```bash
-createdb ev_truck
-alembic upgrade head
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Swagger UI is available at <http://localhost:8000/docs>; health remains at `GET /health`.
-
-## Environment variables
-
-| Variable | Required | Description |
-|---|---:|---|
-| `APP_NAME` | No | OpenAPI application title |
-| `APP_VERSION` | No | OpenAPI application version |
-| `ENV` | No | Runtime environment name |
-| `DATABASE_URL` | Yes | PostgreSQL SQLAlchemy URL using the `postgresql+psycopg2` driver |
-| `GOOGLE_SHEET_ID` | For sync | Default spreadsheet ID |
-| `GOOGLE_SHEET_RANGE` | No | Default A1 range; defaults to `vehicle_readings!A:Z` |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Local only | Optional path to a service-account JSON file; do not commit it |
-
-On Cloud Run, Google Application Default Credentials are used when `GOOGLE_APPLICATION_CREDENTIALS` is absent. Grant the Cloud Run service account access to the spreadsheet. Never place database passwords or service-account JSON in the image or repository.
-
-## Database migrations
-
-Apply all migrations:
-
-```bash
-alembic upgrade head
-```
-
-Create a migration after changing models:
-
-```bash
-alembic revision --autogenerate -m "describe change"
-alembic upgrade head
-```
-
-Rollback one revision:
-
-```bash
-alembic downgrade -1
-```
-
-## Google Sheet import
-
-The first row must contain headers. Supported columns are:
+Business Flow
 
 ```text
-source_record_id, vehicle_id, vehicle_external_id, trip_id, recorded_at,
-soc_percent, energy_used_kwh, distance_km, latitude, longitude
+LINE
+    │
+    ▼
+n8n OCR
+    │
+    ▼
+Google Sheet
+    │
+    ▼
+Google Sheet Sync API
+    │
+    ▼
+PostgreSQL
+    │
+    ▼
+Plan vs Actual
+    │
+    ▼
+Optimization Engine
+    │
+    ▼
+Recommendation
 ```
 
-Either `vehicle_id` or `vehicle_external_id` is required. `recorded_at` must be an ISO-8601 timestamp. `source_record_id` is recommended; when omitted, a deterministic hash of the row is used. The database unique constraint prevents duplicate source records.
+---
 
-Run a sync with configured defaults:
+# 🏗 Architecture
+
+The backend follows Clean Architecture.
+
+```text
+Router
+    │
+    ▼
+Service
+    │
+    ▼
+Repository
+    │
+    ▼
+SQLAlchemy ORM
+    │
+    ▼
+PostgreSQL
+```
+
+Project structure
+
+```text
+app/
+    routers/
+    services/
+    repositories/
+    schemas/
+    db/
+        models/
+
+docs/
+    developer/
+    database/
+    api/
+    deployment/
+    adr/
+```
+
+---
+
+# ✨ Current Features
+
+## Completed
+
+- Project Foundation
+- Application Factory
+- Health Check
+- Vehicle CRUD
+- Trip CRUD
+- Plan vs Actual API
+- SQLAlchemy ORM
+- Alembic Migration
+- PostgreSQL
+- Docker Development Environment
+
+## In Progress
+
+- Google Sheet Sync
+- Vehicle Reading Import
+
+## Planned
+
+- Optimization Engine
+- Recommendation Engine
+- Dashboard API
+- Analytics
+
+---
+
+# 🚀 Quick Start
+
+## Prerequisites
+
+- Python 3.12
+- Docker Engine (WSL Ubuntu)
+- VS Code
+- Dev Container Extension
+
+## Start Development Environment
+
+Start Docker Engine
 
 ```bash
-curl -X POST http://localhost:8000/integrations/google-sheet/sync \
-  -H 'Content-Type: application/json' \
-  -d '{}'
+sudo service docker start
 ```
 
-## Cloud Run manual deployment
-
-The production image listens on Cloud Run's `PORT`. Store the database URL in Secret Manager first; for Cloud SQL, its value can use the Unix socket form `postgresql+psycopg2://USER:PASSWORD@/DATABASE?host=/cloudsql/PROJECT:REGION:INSTANCE`.
+Start PostgreSQL
 
 ```bash
-gcloud run deploy ev-truck-api \
-  --source . \
-  --region asia-southeast1 \
-  --platform managed \
-  --allow-unauthenticated \
-  --service-account ev-truck-api@PROJECT_ID.iam.gserviceaccount.com \
-  --add-cloudsql-instances PROJECT_ID:asia-southeast1:INSTANCE_NAME \
-  --set-secrets DATABASE_URL=ev-truck-database-url:latest \
-  --set-env-vars APP_NAME=ev-truck,ENV=production,GOOGLE_SHEET_ID=SHEET_ID,GOOGLE_SHEET_RANGE=vehicle_readings!A:Z
+docker compose up -d postgres adminer
 ```
 
-Run `alembic upgrade head` against the production database as a controlled release step before sending traffic to a schema-dependent revision. Cloud Run should not run concurrent migrations during container startup.
+Open VS Code
+
+```bash
+code .
+```
+
+Reopen in Dev Container
+
+Run migration
+
+```bash
+alembic upgrade head
+```
+
+Run API
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Swagger
+
+```
+http://localhost:8000/docs
+```
+
+Health Check
+
+```
+GET /health
+```
+
+---
+
+# 📚 Documentation
+
+Complete project documentation is available under
+
+```text
+docs/
+```
+
+Developer Handbook
+
+| Document | Description |
+|----------|-------------|
+| 01-Onboarding | Developer onboarding guide |
+| 02-Git-Workflow | Git workflow and Pull Request |
+| 03-Architecture | System architecture |
+| 04-Feature-Development | Feature development guide |
+| 05-Developer-Navigation | Feature map and navigation |
+| 06-Project-Overview | Project history and phase overview |
+
+Additional documentation
+
+```text
+docs/database/
+docs/api/
+docs/deployment/
+docs/operations/
+docs/adr/
+```
+
+---
+
+# 🗄 Database
+
+Current database tables
+
+- vehicles
+- drivers
+- charging_stations
+- trips
+- vehicle_readings
+- import_batches
+- optimization_jobs
+- optimization_recommendations
+
+---
+
+# ☁ Deployment
+
+Target Platform
+
+- Google Cloud Run
+- Google Cloud SQL
+
+---
+
+# 🌱 Development Workflow
+
+Every feature follows
+
+```text
+Requirement
+
+↓
+
+Feature Branch
+
+↓
+
+Development
+
+↓
+
+Swagger Test
+
+↓
+
+Pull Request
+
+↓
+
+Merge
+
+↓
+
+Documentation Update
+```
+
+---
+
+# 🛣 Roadmap
+
+Completed
+
+- Vehicle CRUD
+- Trip CRUD
+- Plan vs Actual
+- Docker Development Environment
+
+Next
+
+- Phase 6B Google Sheet Sync
+- Vehicle Reading Import
+
+Future
+
+- Optimization Engine
+- Recommendation Engine
+- Dashboard
+- Analytics
+
+---
+
+# 📄 License
+
+Internal Project
+
+Fair & Fast Co., Ltd.
